@@ -8,17 +8,13 @@
  */
 package com.lmqtcc.tcc.interceptor;
 
+import com.lmqtcc.tcc.transactions.TransactionContext;
+import com.lmqtcc.tcc.transactions.TransactionStatus;
 import org.apache.log4j.Logger;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.mengyun.tcctransaction.NoExistedTransactionException;
-import org.mengyun.tcctransaction.OptimisticLockException;
-import org.mengyun.tcctransaction.api.TransactionContext;
-import org.mengyun.tcctransaction.api.TransactionStatus;
-import org.mengyun.tcctransaction.common.MethodType;
-import org.mengyun.tcctransaction.support.TransactionConfigurator;
-import org.mengyun.tcctransaction.utils.CompensableMethodUtils;
-import org.mengyun.tcctransaction.utils.ReflectionUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
 
 import java.lang.reflect.Method;
 
@@ -34,6 +30,10 @@ public class CompensableTransactionInterceptor {
      * 事务配置器
      */
     private TransactionConfigurator transactionConfigurator;
+
+
+    @Autowired
+    private DataSourceTransactionManager transactionManager;
 
     /**
      * 设置事务配置器.
@@ -143,6 +143,81 @@ public class CompensableTransactionInterceptor {
         Method method = ((MethodSignature) (pjp.getSignature())).getMethod();
 
         return ReflectionUtils.getNullValue(method.getReturnType());
+    }
+
+
+
+    public TransactionStatus begin1(){
+        return beginTransaction(transactionManager1);
+    }
+
+    /**
+     * 提交事务1
+     * @param status
+     */
+    public void commit1(TransactionStatus status){
+        commitTransaction(transactionManager1,status);
+    }
+
+    /**
+     * 回滚事务1
+     * @param status
+     */
+    public void rollback1(TransactionStatus status){
+        rollbackTransaction(transactionManager1,status);
+    }
+
+    /**
+     * 开启事务2
+     * @return
+     */
+    public TransactionStatus begin2(){
+        return beginTransaction(transactionManager2);
+    }
+
+    /**
+     * 提交事务2
+     * @param status
+     */
+    public void commit2(TransactionStatus status){
+        commitTransaction(transactionManager2,status);
+    }
+
+    /**
+     * 回滚事务2
+     * @param status
+     */
+    public void rollback2(TransactionStatus status){
+        rollbackTransaction(transactionManager2,status);
+    }
+
+
+    /**
+     * 开启事务
+     */
+    public TransactionStatus beginTransaction(DataSourceTransactionManager transactionManager){
+        DefaultTransactionDefinition def = new DefaultTransactionDefinition();//事务定义类
+        def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+        TransactionStatus status = transactionManager.getTransaction(def);// 返回事务对象
+        return status;
+    }
+
+    /**
+     * 提交事务
+     * @param transactionManager
+     * @param status
+     */
+    public void commitTransaction(DataSourceTransactionManager transactionManager,TransactionStatus status){
+        transactionManager.commit(status);
+    }
+
+    /**
+     * 事务回滚
+     * @param transactionManager
+     * @param status
+     */
+    public void rollbackTransaction(DataSourceTransactionManager transactionManager,TransactionStatus status){
+        transactionManager.rollback(status);
     }
 
 }

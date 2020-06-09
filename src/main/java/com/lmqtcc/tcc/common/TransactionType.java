@@ -6,11 +6,11 @@
  * 课程地址：http://www.roncoo.com/course/view/7ae3d7eddc4742f78b0548aa8bd9ccdb
  * ====================================================================
  */
-package org.mengyun.tcctransaction.common;
+package com.lmqtcc.tcc.common;
 
 /**
  * 事务类型.
- * Created by changmingxie on 11/15/15.
+ *
  */
 public enum TransactionType {
 

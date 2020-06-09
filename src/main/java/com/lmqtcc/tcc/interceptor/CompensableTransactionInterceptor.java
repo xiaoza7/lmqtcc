@@ -13,7 +13,9 @@ import com.lmqtcc.tcc.transactions.TransactionStatus;
 import org.apache.log4j.Logger;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 
 
 import java.lang.reflect.Method;
@@ -78,6 +80,11 @@ public class CompensableTransactionInterceptor {
 
         transactionConfigurator.getTransactionManager().begin(); // 事务开始（创建事务日志记录，并在当前线程缓存该事务日志记录）
 
+        TransactionStatus status = null;
+
+        int update;
+        status =  begin1();
+
         Object returnValue = null; // 返回值
         try {
         	
@@ -86,17 +93,18 @@ public class CompensableTransactionInterceptor {
             logger.debug("==>rootMethodProceed try end");
             
         } catch (OptimisticLockException e) {
-        	logger.warn("==>compensable transaction trying exception.", e);
+        //	logger.warn("==>compensable transaction trying exception.", e);
             throw e; //do not rollback, waiting for recovery job
         } catch (Throwable tryingException) {
             logger.warn("compensable transaction trying failed.", tryingException);
             transactionConfigurator.getTransactionManager().rollback();
+            rollback1(status);
             throw tryingException;
         }
 
         logger.debug("===>rootMethodProceed begin commit()");
-        transactionConfigurator.getTransactionManager().commit(); // Try检验正常后提交(事务管理器在控制提交)：Confirm
-
+      //  transactionConfigurator.getTransactionManager().commit(); // Try检验正常后提交(事务管理器在控制提交)：Confirm
+        commit1(status);
         return returnValue;
     }
 
@@ -109,11 +117,16 @@ public class CompensableTransactionInterceptor {
     private Object providerMethodProceed(ProceedingJoinPoint pjp, TransactionContext transactionContext) throws Throwable {
     	
     	logger.debug("==>providerMethodProceed transactionStatus:" + TransactionStatus.valueOf(transactionContext.getStatus()).toString());
+        TransactionStatus status = null;
+
+        int update;
+
 
         switch (TransactionStatus.valueOf(transactionContext.getStatus())) {
             case TRYING:
             	logger.debug("==>providerMethodProceed try begin");
             	// 基于全局事务ID扩展创建新的分支事务，并存于当前线程的事务局部变量中.
+                status =  begin1();
                 transactionConfigurator.getTransactionManager().propagationNewBegin(transactionContext);
                 logger.debug("==>providerMethodProceed try end");
                 return pjp.proceed(); // 开始执行被拦截的方法，或进入下一个拦截器处理逻辑
@@ -123,6 +136,7 @@ public class CompensableTransactionInterceptor {
                 	// 找出存在的事务并处理.
                     transactionConfigurator.getTransactionManager().propagationExistBegin(transactionContext);
                     transactionConfigurator.getTransactionManager().commit(); // 提交
+                    commit1(status);
                     logger.debug("==>providerMethodProceed confirm end");
                 } catch (NoExistedTransactionException excepton) {
                     //the transaction has been commit,ignore it.
@@ -133,6 +147,7 @@ public class CompensableTransactionInterceptor {
                 	logger.debug("==>providerMethodProceed cancel begin");
                     transactionConfigurator.getTransactionManager().propagationExistBegin(transactionContext);
                     transactionConfigurator.getTransactionManager().rollback(); // 回滚
+                    rollback1(status);
                     logger.debug("==>providerMethodProceed cancel end");
                 } catch (NoExistedTransactionException exception) {
                     //the transaction has been rollback,ignore it.
@@ -148,7 +163,7 @@ public class CompensableTransactionInterceptor {
 
 
     public TransactionStatus begin1(){
-        return beginTransaction(transactionManager1);
+        return beginTransaction(transactionManager);
     }
 
     /**

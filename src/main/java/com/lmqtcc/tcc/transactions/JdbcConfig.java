@@ -1,4 +1,4 @@
-package com.lmq.controller;
+package com.lmqtcc.tcc.transactions;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

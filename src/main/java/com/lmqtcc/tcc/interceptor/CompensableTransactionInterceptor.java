@@ -8,6 +8,9 @@
  */
 package com.lmqtcc.tcc.interceptor;
 
+import com.lmqtcc.tcc.common.MethodType;
+import com.lmqtcc.tcc.transactions.CompensableMethodUtils;
+import com.lmqtcc.tcc.transactions.TransactionConfigurator;
 import com.lmqtcc.tcc.transactions.TransactionContext;
 import com.lmqtcc.tcc.transactions.TransactionStatus;
 import org.apache.log4j.Logger;
@@ -92,7 +95,7 @@ public class CompensableTransactionInterceptor {
             returnValue = pjp.proceed();  // Try (开始执行被拦截的方法，或进入下一个拦截器处理逻辑)
             logger.debug("==>rootMethodProceed try end");
             
-        } catch (OptimisticLockException e) {
+        } catch (Exception e) {
         //	logger.warn("==>compensable transaction trying exception.", e);
             throw e; //do not rollback, waiting for recovery job
         } catch (Throwable tryingException) {
@@ -138,7 +141,7 @@ public class CompensableTransactionInterceptor {
                     transactionConfigurator.getTransactionManager().commit(); // 提交
                     commit1(status);
                     logger.debug("==>providerMethodProceed confirm end");
-                } catch (NoExistedTransactionException excepton) {
+                } catch (Exception excepton) {
                     //the transaction has been commit,ignore it.
                 }
                 break;
@@ -149,7 +152,7 @@ public class CompensableTransactionInterceptor {
                     transactionConfigurator.getTransactionManager().rollback(); // 回滚
                     rollback1(status);
                     logger.debug("==>providerMethodProceed cancel end");
-                } catch (NoExistedTransactionException exception) {
+                } catch (Exception exception) {
                     //the transaction has been rollback,ignore it.
                 }
                 break;
